@@ -24,9 +24,4 @@ class TypedDatabase:
 
     def line_message_model(self) -> Collection[LineMessageModel]:
         col_name = "line_messages"
-
-        if col_name not in self.db.list_collection_names():
-            post_collection: Collection[LineMessageModel] = self.db.create_collection(col_name)
-            post_collection.create_index(("content", "post_at", "sender", "source"), unique=True)  # fixme: maybe not unique
-
         return self.db[col_name]
