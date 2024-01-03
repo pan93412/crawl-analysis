@@ -1,3 +1,4 @@
+import datetime
 import logging
 from pathlib import Path
 import platform
@@ -11,7 +12,7 @@ from torch import le
 
 
 class LineParsedResult(TypedDict):
-    timestamp: str
+    timestamp: datetime.datetime
     author: str
     message: str
 
@@ -52,7 +53,7 @@ class LineCrawler:
 
         # find the search bar – macos.line.search.png. wait 3s.
         search_bar_image = self._get_screenshot_image("macos.line.search.png")
-        search_bar_box = pyautogui.locateOnScreen(search_bar_image, 3)
+        search_bar_box = pyautogui.locateOnScreen(search_bar_image, 3, confidence=0.9)
         assert search_bar_box is not None
 
         # click the search bar
@@ -130,18 +131,22 @@ class LineCrawler:
 
     def _parse_chat(self, chat_text: str) -> list[LineParsedResult]:
         date_start_regex = re.compile(r"^(\d{4}\.\d{2}\.\d{2}) 星期.$", re.MULTILINE)
-        message_start_regex = re.compile(r"^(\d{2}:\d{2}) ([^\s]+) (.+)$")
+        message_start_regex = re.compile(r"^(\d{2}:\d{2}) ([^\s]+)(.+)?$")
 
         day_chat_messages: list[str] = date_start_regex.split(chat_text)
-        day_chat_date: list[tuple[str]] = date_start_regex.findall(chat_text)
-
-        if day_chat_date is None:
-            return []
 
         messages = list[LineParsedResult]()
+        day_date = datetime.datetime(1970, 1, 1)
 
-        for day_date, day_message in zip(map(lambda x: x[0], day_chat_date), day_chat_messages):
+        for day_message in day_chat_messages:
             day_message = day_message.strip()
+
+            # 2023.01.01
+            try:
+                day_date = datetime.datetime.strptime(day_message, "%Y.%m.%d")
+                continue
+            except ValueError:
+                pass
 
             for message_line in day_message.splitlines():
                 message_start_info = message_start_regex.match(message_line)
@@ -153,10 +158,20 @@ class LineCrawler:
                     continue
 
                 message_sent_time, message_author, first_message_line = message_start_info.groups()
+
+                if first_message_line is None:
+                    # system message. ignore.
+                    logging.debug("got system message: %s", message_line)
+                    continue
+
+                # 00:00
+                message_sent_time = datetime.datetime.strptime(message_sent_time, "%H:%M")
+                message_sent_time = day_date.replace(hour=message_sent_time.hour, minute=message_sent_time.minute)
+
                 messages.append({
-                    "timestamp": day_date + " " + message_sent_time,
+                    "timestamp": message_sent_time,
                     "author": message_author,
-                    "message": first_message_line
+                    "message": first_message_line.strip()
                 })
 
         return messages
