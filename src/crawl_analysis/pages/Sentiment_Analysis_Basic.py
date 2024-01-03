@@ -7,11 +7,11 @@ text = st.text_input("Text to analyze")
 level, weight = sa.predict(text)
 color = ""
 match level:
-    case "Positive":
+    case "positive":
         color = "green"
-    case "Negative":
+    case "negative":
         color = "red"
-    case "Neutral":
+    case "neutral":
         color = "gray"
 
 st.markdown(
