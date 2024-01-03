@@ -2,6 +2,7 @@ import streamlit as st
 from models.database import TypedDatabase
 from modules.facebook import FacebookCrawler
 
+st.set_page_config(page_title="Crawlers: Facebook", page_icon="🐜")
 database = TypedDatabase()
 
 cookie = st.text_input("Cookie")

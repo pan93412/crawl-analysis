@@ -1,6 +1,8 @@
 import streamlit as st
 from modules.sentiment import SentimentAnalysis
 
+st.set_page_config(page_title="Sentiment Analysis: Basic", page_icon="🔍")
+
 sa = SentimentAnalysis()
 text = st.text_input("Text to analyze")
 

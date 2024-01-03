@@ -1,7 +1,8 @@
-from pandas import DataFrame, Index
 import streamlit as st
 import torch
 from modules.keyword_extractor import KeywordExtractor
+
+st.set_page_config(page_title="WordCloud inside: Split Words", page_icon="🔍")
 
 ke = KeywordExtractor(torch.device("mps"))
 

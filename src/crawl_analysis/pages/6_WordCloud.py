@@ -1,5 +1,4 @@
 from wordcloud import WordCloud, STOPWORDS
-from pandas import DataFrame, Index
 import streamlit as st
 import torch
 from modules.keyword_extractor import KeywordExtractor

@@ -3,6 +3,7 @@ import streamlit as st
 from models.database import TypedDatabase
 from modules.line import LineCrawler
 
+st.set_page_config(page_title="Crawlers: LINE", page_icon="🐜")
 logging.basicConfig(level=logging.DEBUG)
 
 db = TypedDatabase()
