@@ -16,7 +16,9 @@ dependencies = [
     "webdriver_manager>=4.0.1",
     "beautifulsoup4>=4.12.2",
     "lxml>=5.0.0",
-    "facebook-crawler>=0.0.28",
+    "pyautogui>=0.9.54",
+    "pillow>=10.2.0",
+    "pyperclip>=1.8.2",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
