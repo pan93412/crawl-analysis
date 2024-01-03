@@ -19,9 +19,17 @@ class TypedDatabase:
         if col_name not in self.db.list_collection_names():
             post_collection: Collection[FacebookPostModel] = self.db.create_collection(col_name)
             post_collection.create_index("url", unique=True)
+            post_collection.create_index([("content", pymongo.TEXT)])
+            return post_collection
 
         return self.db[col_name]
 
     def line_message_model(self) -> Collection[LineMessageModel]:
         col_name = "line_messages"
+
+        if col_name not in self.db.list_collection_names():
+            message_collection: Collection[LineMessageModel] = self.db.create_collection(col_name)
+            message_collection.create_index([("content", pymongo.TEXT), ("sender", pymongo.TEXT)])
+            return message_collection
+
         return self.db[col_name]
