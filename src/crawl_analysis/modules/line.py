@@ -108,10 +108,14 @@ class LineCrawler:
         pyautogui.click(pr(save_chat_x), pr(save_chat_y))
 
         confirm_image = self._get_screenshot_image("macos.line.confirm.png")
-        confirm_box = pyautogui.locateOnScreen(confirm_image, 3, grayscale=True, confidence=0.9)
-        assert confirm_box is not None
-        confirm_x, confirm_y = pyautogui.center(confirm_box)
-        pyautogui.click(pr(confirm_x), pr(confirm_y))
+        try:
+            confirm_box = pyautogui.locateOnScreen(confirm_image, 3, grayscale=True, confidence=0.9)
+            assert confirm_box is not None
+            confirm_x, confirm_y = pyautogui.center(confirm_box)
+            pyautogui.click(pr(confirm_x), pr(confirm_y))
+        except (pyautogui.ImageNotFoundException):
+            pass  # when users supresses the confirm dialog
+
         pyautogui.sleep(3)  # wait for saving window
 
         # copy the original name, which is useful for extracting chat name.
@@ -122,22 +126,51 @@ class LineCrawler:
         if chat_name.startswith("[LINE]"):
             chat_name = chat_name[len("[LINE]"):]
 
+        # remove the content in textbox
+        pyautogui.press("backspace", presses = 5, interval = 0.05)
+
         # save file
         with NamedTemporaryFile(suffix=".txt") as f:
             pyautogui.typewrite(f.name[0])
             pyautogui.sleep(0.75)
             pyautogui.typewrite(f.name[1:], interval=0.1)
-            pyautogui.press("enter", presses=4, interval=0.5)
+            pyautogui.press("enter")
 
-            # check if there are content - wait for 30s
-            for _ in range(0, 30):
+            # wait the save button to be clickable
+            save_active_image = self._get_screenshot_image("macos.save.active.png")
+            save_active_box = pyautogui.locateOnScreen(save_active_image, 10)
+            assert save_active_box is not None
+            save_active_x, save_active_y = pyautogui.center(save_active_box)
+            pyautogui.click(pr(save_active_x), pr(save_active_y))
+
+            pyautogui.sleep(2.5)  # prevent animations for locating the override button
+
+            # override, of course.
+            try:
+                override_image = self._get_screenshot_image("macos.save.replace.png")
+                override_box = pyautogui.locateOnScreen(override_image, 5, confidence=0.9)
+                assert override_box is not None
+                override_x, override_y = pyautogui.center(override_box)
+                pyautogui.click(pr(override_x), pr(override_y))
+            except (pyautogui.ImageNotFoundException):
+                logging.warning("override button not found")
+
+            pyautogui.sleep(2)
+
+            # wait 30s for saving. operate now!
+            for _ in range(30):
                 pyautogui.sleep(1)
+
                 f.seek(0)
                 content = f.read()
-                if len(content) > 0:
-                    return content.decode("utf-8"), chat_name
+
+                if content == "":
+                    continue
+
+                return content.decode("utf-8"), chat_name
 
         return None
+
 
     def parse_chat(self, chat_text: str, members: list[str] = []) -> list[LineParsedResult]:
         date_start_regex = re.compile(r"^(\d{4}\.\d{2}\.\d{2}) 星期.$", re.MULTILINE)
