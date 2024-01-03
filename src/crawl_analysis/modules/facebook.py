@@ -17,7 +17,7 @@ class FacebookCrawler:
         self.collection = collection
 
         options = webdriver.ChromeOptions()
-        # options.add_argument("--headless=new")
+        options.add_argument("--headless=new")
 
         service = Service(ChromeDriverManager().install())
 
