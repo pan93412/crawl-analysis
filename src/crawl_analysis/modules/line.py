@@ -1,11 +1,19 @@
+import logging
 from pathlib import Path
 import platform
+import re
 import subprocess
 from tempfile import NamedTemporaryFile
-import time
+from typing import TypedDict
 import pyautogui
 import pyperclip
 from torch import le
+
+
+class LineParsedResult(TypedDict):
+    timestamp: str
+    author: str
+    message: str
 
 
 class LineCrawler:
@@ -28,7 +36,7 @@ class LineCrawler:
         else:
             raise NotImplementedError("unsupported platform")
 
-    def search_group(self, group_name: str) -> str:
+    def search_group(self, group_name: str) -> str | None:
         if platform.system() == "Darwin":
             return self.search_group_mac(group_name)
         # elif platform.system() == "Windows":
@@ -36,7 +44,7 @@ class LineCrawler:
         else:
             raise NotImplementedError("unsupported platform")
 
-    def search_group_mac(self, group_name: str) -> str:
+    def search_group_mac(self, group_name: str) -> str | None:
         pixel_ratio = pyautogui.screenshot().size[0] / pyautogui.size().width
         pr = lambda x: x // pixel_ratio
 
@@ -111,11 +119,48 @@ class LineCrawler:
             pyautogui.press("enter", presses=4, interval=0.5)
 
             # check if there are content - wait for 30s
-            for i in range(0, 30):
+            for _ in range(0, 30):
                 pyautogui.sleep(1)
                 f.seek(0)
                 content = f.read()
                 if len(content) > 0:
                     return content.decode("utf-8")
 
-        return "<no result>"
+        return None
+
+    def _parse_chat(self, chat_text: str) -> list[LineParsedResult]:
+        date_start_regex = re.compile(r"^(\d{4}\.\d{2}\.\d{2}) 星期.$", re.MULTILINE)
+        message_start_regex = re.compile(r"^(\d{2}:\d{2}) ([^\s]+) (.+)$")
+
+        day_chat_messages: list[str] = date_start_regex.split(chat_text)
+        day_chat_date: list[tuple[str]] = date_start_regex.findall(chat_text)
+
+        if day_chat_date is None:
+            return []
+
+        messages = list[LineParsedResult]()
+
+        for day_date, day_message in zip(map(lambda x: x[0], day_chat_date), day_chat_messages):
+            day_message = day_message.strip()
+
+            for message_line in day_message.splitlines():
+                message_start_info = message_start_regex.match(message_line)
+                if message_start_info is None:
+                    if len(messages) == 0:
+                        logging.warning("got unexpected part: %s", message_line)
+                    else:
+                        messages[-1]["message"] += "\n" + message_line
+                    continue
+
+                message_sent_time, message_author, first_message_line = message_start_info.groups()
+                messages.append({
+                    "timestamp": day_date + " " + message_sent_time,
+                    "author": message_author,
+                    "message": first_message_line
+                })
+
+        return messages
+
+
+    def put_to_collection(self, exported_history: str) -> None:
+        pass
