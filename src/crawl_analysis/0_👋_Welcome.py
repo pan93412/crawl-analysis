@@ -16,7 +16,7 @@ st.markdown("## 流程")
 stm.st_mermaid("""
 graph TB
     A[爬蟲] --> B[放入 MongoDB]
-    B --> C[取出資料]
+    B --> C[取出資料 / 正規化]
     C --> D[語意分析]
-    C --> D[文字雲]
-""")
+    C --> E[文字雲]
+""", height="500px")

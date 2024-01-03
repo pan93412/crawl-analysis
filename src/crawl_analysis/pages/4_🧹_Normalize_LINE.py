@@ -19,6 +19,8 @@ if st.button("Search"):
         case _:
             posts = model.find()
 
+    st.dataframe(posts)
+
     for post in posts:
         st.markdown(
             f"""
