@@ -8,8 +8,9 @@ from tempfile import NamedTemporaryFile
 from typing import TypedDict
 import pyautogui
 import pyperclip
-from torch import le
+from pymongo.collection import Collection
 
+from models.post import LineMessageModel
 
 class LineParsedResult(TypedDict):
     timestamp: datetime.datetime
@@ -18,7 +19,8 @@ class LineParsedResult(TypedDict):
 
 
 class LineCrawler:
-    def __init__(self):
+    def __init__(self, collection: Collection[LineMessageModel]):
+        self.collection = collection
         self.assets_path = Path(__file__).parent / "line-screenshots"
 
     def _get_screenshot_image(self, name: str) -> str:
@@ -37,7 +39,7 @@ class LineCrawler:
         else:
             raise NotImplementedError("unsupported platform")
 
-    def search_group(self, group_name: str) -> str | None:
+    def search_group(self, group_name: str) -> tuple[str, str] | None:
         if platform.system() == "Darwin":
             return self.search_group_mac(group_name)
         # elif platform.system() == "Windows":
@@ -45,7 +47,7 @@ class LineCrawler:
         else:
             raise NotImplementedError("unsupported platform")
 
-    def search_group_mac(self, group_name: str) -> str | None:
+    def search_group_mac(self, group_name: str) -> tuple[str, str] | None:  # message, chat name
         pixel_ratio = pyautogui.screenshot().size[0] / pyautogui.size().width
         pr = lambda x: x // pixel_ratio
 
@@ -112,6 +114,14 @@ class LineCrawler:
         pyautogui.click(pr(confirm_x), pr(confirm_y))
         pyautogui.sleep(3)  # wait for saving window
 
+        # copy the original name, which is useful for extracting chat name.
+        pyautogui.hotkey("command", "a")
+        pyautogui.hotkey("command", "c")
+        chat_name = pyperclip.paste()
+
+        if chat_name.startswith("[LINE]"):
+            chat_name = chat_name[len("[LINE]"):]
+
         # save file
         with NamedTemporaryFile(suffix=".txt") as f:
             pyautogui.typewrite(f.name[0])
@@ -125,13 +135,17 @@ class LineCrawler:
                 f.seek(0)
                 content = f.read()
                 if len(content) > 0:
-                    return content.decode("utf-8")
+                    return content.decode("utf-8"), chat_name
 
         return None
 
-    def _parse_chat(self, chat_text: str) -> list[LineParsedResult]:
+    def parse_chat(self, chat_text: str, members: list[str] = []) -> list[LineParsedResult]:
         date_start_regex = re.compile(r"^(\d{4}\.\d{2}\.\d{2}) 星期.$", re.MULTILINE)
-        message_start_regex = re.compile(r"^(\d{2}:\d{2}) ([^\s]+)(.+)?$")
+        message_start_regex = re.compile(r"^(\d{2}:\d{2}) (.+)$")
+
+        members_regex = "|".join(map(re.escape, members))
+        message_split_regex = re.compile(fr"^({members_regex+'|' if members_regex != '' else ''}|.+?) (.+)$", re.MULTILINE)
+        logging.debug("message_split_regex: %s", message_split_regex.pattern)
 
         day_chat_messages: list[str] = date_start_regex.split(chat_text)
 
@@ -157,12 +171,15 @@ class LineCrawler:
                         messages[-1]["message"] += "\n" + message_line
                     continue
 
-                message_sent_time, message_author, first_message_line = message_start_info.groups()
+                message_sent_time, message_line = message_start_info.groups()
+                splited_message = message_split_regex.match(message_line)
 
-                if first_message_line is None:
+                if splited_message is None:
                     # system message. ignore.
                     logging.debug("got system message: %s", message_line)
                     continue
+
+                message_author, first_message_line = splited_message.groups()
 
                 # 00:00
                 message_sent_time = datetime.datetime.strptime(message_sent_time, "%H:%M")
@@ -177,5 +194,13 @@ class LineCrawler:
         return messages
 
 
-    def put_to_collection(self, exported_history: str) -> None:
-        pass
+    def put_to_collection(self, parsed_result: list[LineParsedResult], chat_name: str) -> None:
+        self.collection.insert_many((
+            {
+                "content": message["message"],
+                "post_at": message["timestamp"],
+                "sender": message["author"],
+                "source": chat_name,
+            }
+            for message in parsed_result
+        ))
