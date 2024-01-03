@@ -50,10 +50,6 @@ class FacebookCrawler:
 
 
     def crawl(self, pages: int) -> pd.DataFrame:
-        df = pd.DataFrame(index=["content", "likes_count", "url"])
-        index = ["content", "likes_count", "url"]
-        dataset = list[FacebookPostModel]()
-
         article_class_name = "x9f619 x1n2onr6 x1ja2u2z x2bj2ny x1qpq9i9 xdney7k xu5ydu1 xt3gfkd xh8yej3 x6ikm8r x10wlt62 xquyuld"
         article_css_selector = "."+".".join(article_class_name.split(" "))
         post_url_class_name = "x1i10hfl xjbqb8w x6umtig x1b1mbwd xaqea5y xav7gou x9f619 x1ypdohk xt0psk2 xe8uvvx xdj266r x11i5rnm xat24cr x1mh8g0r xexx8yu x4uap5 x18d9i69 xkhd6sd x16tdsg8 x1hl2dhg xggy1nq x1a2a7pz x1heor9g xt0b8zv xo1l8bm"
@@ -63,7 +59,7 @@ class FacebookCrawler:
         source = source_element.text
 
         # Pages to crawl.
-        for i in range(pages):
+        for _ in range(pages):
             articles = self.driver.find_elements(
                 By.CSS_SELECTOR,
                 article_css_selector,
@@ -152,5 +148,4 @@ class FacebookCrawler:
             # Wait 2 seconds. You can change this number to match the speed of your internet.
             time.sleep(2)
 
-
-        return df
+        return pd.DataFrame(list(self.collection.find()))
