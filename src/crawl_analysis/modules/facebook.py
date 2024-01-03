@@ -13,11 +13,12 @@ from pymongo.errors import DuplicateKeyError
 from models.post import FacebookPostModel
 
 class FacebookCrawler:
-    def __init__(self, collection: Collection[FacebookPostModel]):
+    def __init__(self, collection: Collection[FacebookPostModel], headless = False):
         self.collection = collection
 
         options = webdriver.ChromeOptions()
-        options.add_argument("--headless=new")
+        if headless:
+            options.add_argument("--headless=new")
 
         service = Service(ChromeDriverManager().install())
 
