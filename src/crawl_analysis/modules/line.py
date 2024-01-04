@@ -145,13 +145,13 @@ class LineCrawler:
 
             pyautogui.sleep(2.5)  # prevent animations for locating the override button
 
-            # override, of course.
+            # overwrite, of course.
             try:
-                override_image = self._get_screenshot_image("macos.save.replace.png")
-                override_box = pyautogui.locateOnScreen(override_image, 5, confidence=0.9)
-                assert override_box is not None
-                override_x, override_y = pyautogui.center(override_box)
-                pyautogui.click(pr(override_x), pr(override_y))
+                overwrite_image = self._get_screenshot_image("macos.save.replace.png")
+                overwrite_box = pyautogui.locateOnScreen(overwrite_image, 5, confidence=0.9)
+                assert overwrite_box is not None
+                overwrite_x, overwrite_y = pyautogui.center(overwrite_box)
+                pyautogui.click(pr(overwrite_x), pr(overwrite_y))
             except (pyautogui.ImageNotFoundException):
                 logging.warning("override button not found")
 
