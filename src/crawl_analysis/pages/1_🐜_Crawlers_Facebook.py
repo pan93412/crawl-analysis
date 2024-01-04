@@ -15,5 +15,5 @@ headless = st.checkbox("Headless", value=False)
 if st.button("Start crawling"):
     crawler = FacebookCrawler(database.facebook_post_model(), headless=headless)
     crawler.go(url, cookie=cookie if cookie != "" else None)
-    posts = crawler.crawl(int(pages))
-    st.dataframe(posts)
+    crawler.crawl(int(pages))
+    st.write("Done!")
